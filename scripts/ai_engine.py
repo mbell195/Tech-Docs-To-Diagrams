@@ -3,9 +3,15 @@ import glob
 import json
 import re
 from openai import OpenAI
+import google.generativeai as genai
 
-# Initialize Client
-client = OpenAI(api_key=os.environ.get("AI_API_KEY"))
+# Initialize OpenAI Client
+openai_client = OpenAI(api_key=os.environ.get("AI_API_KEY"))
+
+# Initialize Google AI Client
+google_api_key = os.environ.get("GOOGLE_API_KEY")
+if google_api_key:
+    genai.configure(api_key=google_api_key)
 
 def generate_mermaid_from_text():
     """Workflow A: Watches source/drafts/*.txt -> Creates source/mermaid/*.mmd"""
@@ -30,7 +36,7 @@ def generate_mermaid_from_text():
         user_content = open(draft_path, "r").read()
 
         try:
-            response = client.chat.completions.create(
+            response = openai_client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -71,7 +77,10 @@ def generate_images():
             print(f"Skipping Image {output_path} (Exists)")
             continue
 
-        print(f"Generating Image for: {json_path}...")
+        # Determine which model to use (default to dall-e-3)
+        image_model = meta.get("image_model", "dall-e-3")
+
+        print(f"Generating Image for: {json_path} using {image_model}...")
         final_prompt = meta.get("prompt", "")
 
         # Handle Workflow C (Polished)
@@ -86,20 +95,42 @@ def generate_images():
                 continue
 
         try:
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt=final_prompt,
-                size="1024x1024",
-                quality="hd",
-                n=1,
-            )
-            image_url = response.data[0].url
+            if image_model == "imagen-3.0-generate-001":
+                # Use Google Imagen 3
+                if not google_api_key:
+                    print(f"Error: GOOGLE_API_KEY not set. Cannot use {image_model}")
+                    continue
 
-            import requests
-            img_data = requests.get(image_url).content
-            with open(output_path, "wb") as handler:
-                handler.write(img_data)
-            print(f"Saved Image: {output_path}")
+                model = genai.GenerativeModel(image_model)
+                response = model.generate_content(final_prompt)
+
+                # Save the generated image
+                if response.candidates and response.candidates[0].content.parts:
+                    for part in response.candidates[0].content.parts:
+                        if hasattr(part, 'inline_data'):
+                            img_data = part.inline_data.data
+                            with open(output_path, "wb") as handler:
+                                handler.write(img_data)
+                            print(f"Saved Image: {output_path}")
+                            break
+                else:
+                    print(f"No image data returned from Imagen 3 for {json_path}")
+            else:
+                # Use DALL-E-3 (default)
+                response = openai_client.images.generate(
+                    model="dall-e-3",
+                    prompt=final_prompt,
+                    size="1024x1024",
+                    quality="hd",
+                    n=1,
+                )
+                image_url = response.data[0].url
+
+                import requests
+                img_data = requests.get(image_url).content
+                with open(output_path, "wb") as handler:
+                    handler.write(img_data)
+                print(f"Saved Image: {output_path}")
 
         except Exception as e:
             print(f"Failed to generate image for {json_path}: {e}")
@@ -110,3 +141,6 @@ if __name__ == "__main__":
     else:
         generate_mermaid_from_text()
         generate_images()
+
+    if not os.environ.get("GOOGLE_API_KEY"):
+        print("Note: GOOGLE_API_KEY not set. Imagen 3 model will not be available.")

@@ -28,6 +28,7 @@ jobs:
       - name: Run AI Engine
         env:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: python scripts/ai_engine.py
 
       - name: Commit AI Generated Assets

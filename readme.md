@@ -2,7 +2,7 @@
 
 **Maintained by:** Marc Bell
 
-This repository demonstrates a "Hybrid Diagramming" workflow designed for modern technical documentation. It bridges the gap between **Engineering Precision** (Version-controlled diagram code) and **Visual Impact** (Generative AI assets).
+Accelerates technical documentation by automatically generating Mermaid diagrams directly from written drafts. Users can manually fine-tune the code via a visual editor for engineering precision, then apply Nano Banana AI to instantly beautify the diagram flows. This hybrid approach combines the reliability of version-controlled data with the aesthetic quality of professional design tools, all within an automated GitHub workflow.
 
 ## 📂 Project Structure
 
@@ -32,20 +32,24 @@ This project is equipped with a **Self-Orchestrating AI Engine**. You do not nee
 
 ### 1. Setup
 
-To enable the AI features, you must provide an API Key.
+To enable the AI features, you must provide API Keys.
 
 1. Go to your GitHub Repo **Settings > Secrets and variables > Actions**.
 2. Click **New repository secret**.
-3. **Name:** `AI_API_KEY`
-   **Value:** Your OpenAI API Key (or compatible provider).
+3. **Required for all workflows:**
+   - **Name:** `AI_API_KEY`
+   - **Value:** Your OpenAI API Key (or compatible provider)
+4. **Optional - for Imagen 3 image generation:**
+   - **Name:** `GOOGLE_API_KEY`
+   - **Value:** Your Google AI API Key
 
 ### 2. How to Trigger the Bots
 
 | Workflow | Action Required | What happens? |
 |----------|----------------|---------------|
 | **A: Text-to-Mermaid** | Create/Push a file to `source/drafts/my-note.txt` | 1. AI reads text.<br>2. AI generates `source/mermaid/my-note.mmd`.<br>3. Render Bot detects `.mmd` and creates SVG/PNG. |
-| **B: Text-to-Image** | Create/Push a file to `source/generative/hero.json` | 1. AI reads JSON prompt.<br>2. AI generates DALL-E 3 image.<br>3. Bot saves `assets/diagrams-generated/hero.png`. |
-| **C: Polished Logic** | Create/Push a file to `source/polished/style.json` | 1. AI reads linked Mermaid code.<br>2. AI "draws" the logic in requested style.<br>3. Bot saves `assets/diagrams-generated/style.png`. |
+| **B: Text-to-Image** | Create/Push a file to `source/generative/hero.json` | 1. AI reads JSON prompt.<br>2. AI generates image using specified model (DALL-E 3 or Imagen 3).<br>3. Bot saves `assets/diagrams-generated/hero.png`. |
+| **C: Polished Logic** | Create/Push a file to `source/polished/style.json` | 1. AI reads linked Mermaid code.<br>2. AI "draws" the logic in requested style using specified model.<br>3. Bot saves `assets/diagrams-generated/style.png`. |
 
 ---
 
@@ -67,6 +71,33 @@ To enable the AI features, you must provide an API Key.
 - **Workflow B (Pure Generation):** Used for "vibes" and general illustrations.
 - **Workflow C (Logic Enhancement):** Used when you need a specific flow (defined in Mermaid) but want it to look like a whiteboard sketch, a blueprint, or a 3D render.
 
+### Image Model Selection
+
+You can choose between two AI image generation models:
+
+- **DALL-E 3** (default): OpenAI's image generation model
+- **Imagen 3**: Google's latest image generation model
+
+To specify a model, add the `image_model` field to your JSON file:
+
+```json
+{
+  "prompt": "Your image prompt here",
+  "image_model": "dall-e-3"
+}
+```
+
+Or for Imagen 3:
+
+```json
+{
+  "prompt": "Your image prompt here",
+  "image_model": "imagen-3.0-generate-001"
+}
+```
+
+If no `image_model` is specified, DALL-E 3 is used by default.
+
 **Tip:** If you delete a generated image from `assets/`, the bot will regenerate it on the next run (costing API credits). If the image exists, the bot skips it to save money.
 
 ---
@@ -79,8 +110,9 @@ To run the AI scripts locally (for testing without committing):
 # 1. Install Python requirements
 pip install -r requirements.txt
 
-# 2. Set API Key
-export AI_API_KEY="sk-..."
+# 2. Set API Keys
+export AI_API_KEY="sk-..."              # Required: OpenAI API Key
+export GOOGLE_API_KEY="..."             # Optional: Google AI API Key for Imagen 3
 
 # 3. Run Engine
 python scripts/ai_engine.py
