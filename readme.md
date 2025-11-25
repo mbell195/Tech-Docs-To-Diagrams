@@ -2,7 +2,7 @@
 
 **Maintained by:** Marc Bell
 
-Accelerates technical documentation by automatically generating Mermaid diagrams directly from written drafts. Users can manually fine-tune the code via a visual editor for engineering precision, then apply DALL-E 3 or Imagen 3 to instantly beautify the diagram flows. This hybrid approach combines the reliability of version-controlled data with the aesthetic quality of professional design tools, all within an automated GitHub workflow.
+Accelerates technical documentation by automatically generating Mermaid diagrams directly from written drafts using OpenAI or Google Gemini. Users can manually fine-tune the code via a visual editor for engineering precision, then apply DALL-E 3 or Imagen 3 to instantly beautify the diagram flows. This hybrid approach combines the reliability of version-controlled data with the aesthetic quality of professional design tools, all within an automated GitHub workflow.
 
 ## 📂 Project Structure
 
@@ -32,30 +32,66 @@ This project is equipped with a **Self-Orchestrating AI Engine**. You do not nee
 
 ### 1. Setup
 
-To enable the AI features, you must provide API Keys.
+To enable the AI features, you must configure API Keys. You can choose to use **OpenAI** (GPT-4o + DALL-E 3) or **Google AI** (Gemini + Imagen 3), or both.
 
 1. Go to your GitHub Repo **Settings > Secrets and variables > Actions**.
 2. Click **New repository secret**.
-3. **Required for all workflows:**
-   - **Name:** `AI_API_KEY`
-   - **Value:** Your OpenAI API Key (or compatible provider)
-4. **Optional - for Imagen 3 image generation:**
+3. **Configure at least one of the following:**
+
+   **For OpenAI:**
+   - **Name:** `OPENAI_API_KEY`
+   - **Value:** Your OpenAI API Key
+
+   **For Google AI:**
    - **Name:** `GOOGLE_API_KEY`
    - **Value:** Your Google AI API Key
+
+4. **Optional - Choose your LLM provider for text-to-Mermaid generation:**
+   - **Name:** `LLM_PROVIDER`
+   - **Value:** `openai` (default) or `gemini`
 
 ### 2. How to Trigger the Bots
 
 | Workflow | Action Required | What happens? |
 |----------|----------------|---------------|
-| **A: Text-to-Mermaid** | Create/Push a file to `source/drafts/my-note.txt` | 1. AI reads text.<br>2. AI generates `source/mermaid/my-note.mmd`.<br>3. Render Bot detects `.mmd` and creates SVG/PNG. |
+| **A: Text-to-Mermaid** | Create/Push a file to `source/drafts/my-note.txt` | 1. AI (GPT-4o or Gemini) reads text.<br>2. AI generates `source/mermaid/my-note.mmd`.<br>3. Render Bot detects `.mmd` and creates SVG/PNG. |
 | **B: Text-to-Image** | Create/Push a file to `source/generative/hero.json` | 1. AI reads JSON prompt.<br>2. AI generates image using specified model (DALL-E 3 or Imagen 3).<br>3. Bot saves `assets/diagrams-generated/hero.png`. |
 | **C: Polished Logic** | Create/Push a file to `source/polished/style.json` | 1. AI reads linked Mermaid code.<br>2. AI "draws" the logic in requested style using specified model.<br>3. Bot saves `assets/diagrams-generated/style.png`. |
+
+---
+
+## 🔧 AI Provider Options
+
+This project supports both major AI ecosystems:
+
+### Text Generation (Workflow A - Mermaid Diagrams)
+- **OpenAI GPT-4o**: Excellent at understanding complex technical descriptions and generating precise Mermaid diagrams
+- **Google Gemini 2.0 Flash**: Fast, cost-effective alternative with strong diagram generation capabilities
+
+Set `LLM_PROVIDER` to choose which one to use (defaults to `openai` if not specified).
+
+### Image Generation (Workflows B & C - Visual Diagrams)
+- **OpenAI DALL-E 3**: High-quality image generation with excellent prompt following
+- **Google Imagen 3**: Latest Google image generation model with strong artistic capabilities
+
+Specify `image_model` in your JSON files to choose which image generator to use.
+
+### Provider Combinations
+
+You can mix and match providers:
+- Use Gemini for text-to-Mermaid (faster/cheaper) + DALL-E 3 for images (high quality)
+- Use GPT-4o for text-to-Mermaid (precise) + Imagen 3 for images (artistic)
+- Use all Google AI (Gemini + Imagen 3) or all OpenAI (GPT-4o + DALL-E 3)
 
 ---
 
 ## 📐 Workflow A: The Precision Path
 
 **Best for:** API flows, sequence diagrams, database schemas, and logic trees.
+
+**LLM Options:**
+- **GPT-4o** (OpenAI) - Default, excellent at understanding complex technical descriptions
+- **Gemini 2.0 Flash** (Google) - Fast and cost-effective alternative
 
 1. **Draft:** Upload rough notes to `source/drafts/`.
 2. **Wait:** The bot will commit a `.mmd` file to `source/mermaid/` automatically.
@@ -102,6 +138,32 @@ If no `image_model` is specified, DALL-E 3 is used by default.
 
 ---
 
+## 📝 Configuration Examples
+
+### Example 1: All OpenAI
+```bash
+export OPENAI_API_KEY="sk-..."
+export LLM_PROVIDER="openai"
+```
+JSON files: `"image_model": "dall-e-3"` (or omit for default)
+
+### Example 2: All Google AI
+```bash
+export GOOGLE_API_KEY="..."
+export LLM_PROVIDER="gemini"
+```
+JSON files: `"image_model": "imagen-3.0-generate-001"`
+
+### Example 3: Mixed (Gemini for text, DALL-E for images)
+```bash
+export OPENAI_API_KEY="sk-..."
+export GOOGLE_API_KEY="..."
+export LLM_PROVIDER="gemini"
+```
+JSON files: `"image_model": "dall-e-3"`
+
+---
+
 ## 🛠️ Local Development
 
 To run the AI scripts locally (for testing without committing):
@@ -110,11 +172,14 @@ To run the AI scripts locally (for testing without committing):
 # 1. Install Python requirements
 pip install -r requirements.txt
 
-# 2. Set API Keys
-export AI_API_KEY="sk-..."              # Required: OpenAI API Key
-export GOOGLE_API_KEY="..."             # Optional: Google AI API Key for Imagen 3
+# 2. Set API Keys (at least one required)
+export OPENAI_API_KEY="sk-..."          # For GPT-4o and DALL-E 3
+export GOOGLE_API_KEY="..."             # For Gemini and Imagen 3
 
-# 3. Run Engine
+# 3. (Optional) Choose LLM provider for text-to-Mermaid
+export LLM_PROVIDER="openai"            # or "gemini" (default: openai)
+
+# 4. Run Engine
 python scripts/ai_engine.py
 ```
 

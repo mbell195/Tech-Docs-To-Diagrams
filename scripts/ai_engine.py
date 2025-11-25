@@ -6,12 +6,18 @@ from openai import OpenAI
 import google.generativeai as genai
 
 # Initialize OpenAI Client
-openai_client = OpenAI(api_key=os.environ.get("AI_API_KEY"))
+openai_api_key = os.environ.get("OPENAI_API_KEY")
+openai_client = None
+if openai_api_key:
+    openai_client = OpenAI(api_key=openai_api_key)
 
 # Initialize Google AI Client
 google_api_key = os.environ.get("GOOGLE_API_KEY")
 if google_api_key:
     genai.configure(api_key=google_api_key)
+
+# Determine which LLM provider to use (default to OpenAI if both are set)
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai").lower()  # "openai" or "gemini"
 
 def generate_mermaid_from_text():
     """Workflow A: Watches source/drafts/*.txt -> Creates source/mermaid/*.mmd"""
@@ -32,18 +38,38 @@ def generate_mermaid_from_text():
             print(f"Skipping {base_name} (Exists)")
             continue
 
-        print(f"Generating Mermaid for: {base_name}...")
+        print(f"Generating Mermaid for: {base_name} using {LLM_PROVIDER}...")
         user_content = open(draft_path, "r").read()
 
         try:
-            response = openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content}
-                ]
-            )
-            content = response.choices[0].message.content
+            content = None
+
+            if LLM_PROVIDER == "gemini":
+                if not google_api_key:
+                    print(f"Error: GOOGLE_API_KEY not set. Cannot use Gemini.")
+                    continue
+
+                # Use Gemini for text generation
+                model = genai.GenerativeModel("gemini-2.0-flash-exp")
+                full_prompt = f"{system_prompt}\n\n{user_content}"
+                response = model.generate_content(full_prompt)
+                content = response.text
+            else:
+                # Use OpenAI (default)
+                if not openai_client:
+                    print(f"Error: OPENAI_API_KEY not set. Cannot use OpenAI.")
+                    continue
+
+                response = openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content}
+                    ]
+                )
+                content = response.choices[0].message.content
+
+            # Extract Mermaid code from response
             mermaid_code = re.search(r"```mermaid\n(.*?)\n```", content, re.DOTALL)
 
             if mermaid_code:
@@ -136,11 +162,27 @@ def generate_images():
             print(f"Failed to generate image for {json_path}: {e}")
 
 if __name__ == "__main__":
-    if not os.environ.get("AI_API_KEY"):
-        print("Skipping AI generation: No AI_API_KEY found.")
-    else:
-        generate_mermaid_from_text()
-        generate_images()
+    # Check if at least one API key is configured
+    has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+    has_google = bool(os.environ.get("GOOGLE_API_KEY"))
 
-    if not os.environ.get("GOOGLE_API_KEY"):
-        print("Note: GOOGLE_API_KEY not set. Imagen 3 model will not be available.")
+    if not has_openai and not has_google:
+        print("Error: No API keys found. Please set OPENAI_API_KEY and/or GOOGLE_API_KEY.")
+        exit(1)
+
+    print(f"Active LLM Provider: {LLM_PROVIDER}")
+
+    if LLM_PROVIDER == "openai" and not has_openai:
+        print("Warning: LLM_PROVIDER is set to 'openai' but OPENAI_API_KEY is not set.")
+
+    if LLM_PROVIDER == "gemini" and not has_google:
+        print("Warning: LLM_PROVIDER is set to 'gemini' but GOOGLE_API_KEY is not set.")
+
+    if not has_openai:
+        print("Note: OPENAI_API_KEY not set. OpenAI features will not be available.")
+
+    if not has_google:
+        print("Note: GOOGLE_API_KEY not set. Google AI features (Gemini, Imagen 3) will not be available.")
+
+    generate_mermaid_from_text()
+    generate_images()
