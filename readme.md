@@ -2,7 +2,7 @@
 
 **Maintained by:** Marc Bell
 
-Accelerates technical documentation by automatically generating Mermaid diagrams directly from written drafts. Users can manually fine-tune the code via a visual editor for engineering precision, then apply Nano Banana AI to instantly beautify the diagram flows. This hybrid approach combines the reliability of version-controlled data with the aesthetic quality of professional design tools, all within an automated GitHub workflow.
+Accelerates technical documentation by automatically generating Mermaid diagrams directly from written drafts. Users can manually fine-tune the code via a visual editor for engineering precision, then apply DALL-E 3 or Imagen 3 to instantly beautify the diagram flows. This hybrid approach combines the reliability of version-controlled data with the aesthetic quality of professional design tools, all within an automated GitHub workflow.
 
 ## 📂 Project Structure
 
